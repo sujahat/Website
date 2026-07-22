@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NEXUS // Deep System & Network Telemetry</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        matrix: {
+                            bg: '#000000',
+                            text: '#00FF41',
+                            dim: '#008F39',
+                            border: '#003300',
+                            glow: 'rgba(0, 255, 65, 0.15)'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #000; }
+        ::-webkit-scrollbar-thumb { background: #003300; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #00FF41; }
+
+        .glitch {
+            position: relative;
+            animation: glitch 1s infinite;
+        }
+
+        @keyframes glitch {
+            2%, 64% { transform: translate(2px, 0) skew(0deg); }
+            4%, 60% { transform: translate(-2px, 0) skew(0deg); }
+            62% { transform: translate(0, 0) skew(5deg); }
+        }
+
+        input::placeholder { color: #008F39; opacity: 0.7; }
+        
+        #matrix-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            opacity: 0.7;
+        }
+    </style>
+</head>
+<body class="bg-matrix-bg text-matrix-text font-mono min-h-screen p-2 sm:p-4 lg:p-6 selection:bg-matrix-text selection:text-black flex flex-col justify-between">
+
+    <!-- ANIMATED MATRIX BACKGROUND -->
+    <canvas id="matrix-bg"></canvas>
+
+    <!-- SPLASH SCREEN -->
+    <div id="splash-screen" class="fixed inset-0 bg-black/95 z-50 flex items-center justify-center p-4 transition-opacity duration-700">
+        <div class="bg-black border border-matrix-border p-8 rounded-xl shadow-[0_0_30px_rgba(0,255,65,0.2)] max-w-md w-full text-center">
+            <div class="mb-6">
+                <i class="fa-solid fa-terminal text-5xl text-matrix-text mb-3 drop-shadow-[0_0_10px_#00FF41]"></i>
+                <h1 class="text-2xl font-bold tracking-widest glitch uppercase">SUJAHAT.COM // Terminal</h1>
+                <p class="text-matrix-dim text-sm mt-2">IDENTITY VERIFICATION REQUIRED</p>
+            </div>
+            <form id="name-form" onsubmit="handleSplashSubmit(event)" class="space-y-4">
+                <input type="text" id="visitor-name-input" placeholder="ENTER OPERATOR HANDLE" required autocomplete="off"
+                    class="w-full px-4 py-3 bg-black border-2 border-matrix-border focus:outline-none focus:border-matrix-text text-center text-lg text-matrix-text uppercase tracking-wider transition-colors duration-300">
+                <button type="submit" 
+                    class="w-full py-3 bg-matrix-text hover:bg-matrix-dim text-black font-bold tracking-wider uppercase transition duration-200 shadow-[0_0_15px_rgba(0,255,65,0.4)] cursor-pointer">
+                    Initialize
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- MAIN DASHBOARD (Hidden Initially) -->
+    <div id="dashboard" class="max-w-7xl mx-auto hidden opacity-0 transition-opacity duration-1000 space-y-6 pb-10 w-full flex-grow">
+        
+        <!-- Header Banner -->
+        <div class="bg-black/80 border-2 border-matrix-border p-6 rounded-xl flex flex-col md:flex-row justify-between items-center gap-4 shadow-[0_0_20px_rgba(0,255,65,0.1)]">
+            <div>
+                <h1 id="welcome-banner" class="text-2xl sm:text-3xl font-extrabold text-matrix-text uppercase tracking-wider drop-shadow-[0_0_5px_#00FF41]"></h1>
+                <p class="text-matrix-dim text-sm mt-1">ADVANCED SYSTEM, HARDWARE & NETWORK INTELLIGENCE REPORT</p>
+            </div>
+            <div class="flex items-center gap-3 bg-black border border-matrix-border px-4 py-2 rounded-lg text-matrix-text text-sm font-bold uppercase tracking-wider">
+                <div class="relative flex h-3 w-3">
+                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-matrix-text opacity-75"></span>
+                    <span class="relative inline-flex rounded-full h-3 w-3 bg-matrix-dim"></span>
+                </div>
+                Live Telemetry Nominal
+            </div>
+        </div>
+
+        <!-- 1. NETWORK & THREAT INTELLIGENCE -->
+        <div class="bg-black/80 border border-matrix-border p-5 rounded-lg">
+            <h2 class="text-lg font-bold text-matrix-dim mb-4 uppercase tracking-widest border-l-4 border-matrix-border pl-3">
+                <i class="fa-solid fa-satellite-dish mr-2"></i>Network & Threat Intelligence
+            </h2>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
+                <div class="bg-black p-3 border border-matrix-border/50"><span class="text-matrix-dim block text-xs uppercase">IP Address</span><span id="net-ip" class="text-base font-bold">Scanning...</span></div>
+                <div class="bg-black p-3 border border-matrix-border/50"><span class="text-matrix-dim block text-xs uppercase">Country / ISO</span><span id="net-country" class="block">Scanning...</span></div>
+                <div class="bg-black p-3 border border-matrix-border/50"><span class="text-matrix-dim block text-xs uppercase">State / Region</span><span id="net-state" class="block">Scanning...</span></div>
+                <div class="bg-black p-3 border border-matrix-border/50"><span class="text-matrix-dim block text-xs uppercase">City</span><span id="net-city" class="block">Scanning...</span></div>
+                
+                <div class="bg-black p-3 border border-matrix-border/50"><span class="text-matrix-dim block text-xs uppercase">Postal Code</span><span id="net-postal" class="block">Scanning...</span></div>
+                <div class="bg-black p-3 border border-matrix-border/50"><span class="text-matrix-dim block text-xs uppercase">Coordinates (Lat / Lon)</span><span id="net-coords" class="block text-xs">Scanning...</span></div>
+                <div class="bg-black p-3 border border-matrix-border/50"><span class="text-matrix-dim block text-xs uppercase">ISP / Organization</span><span id="net-isp" class="block truncate">Scanning...</span></div>
+                <div class="bg-black p-3 border border-matrix-border/50"><span class="text-matrix-dim block text-xs uppercase">ASN</span><span id="net-asn" class="block text-xs truncate">Scanning...</span></div>
+
+                <div class="bg-black p-3 border border-matrix-border/50"><span class="text-matrix-dim block text-xs uppercase">Proxy / VPN / Tor</span><span id="net-proxy" class="font-bold text-xs">Scanning...</span></div>
+                <div class="bg-black p-3 border border-matrix-border/50"><span class="text-matrix-dim block text-xs uppercase">Hosting / Datacenter</span><span id="net-hosting" class="font-bold">Scanning...</span></div>
+                <div class="bg-black p-3 border border-matrix-border/50"><span class="text-matrix-dim block text-xs uppercase">Threat Level</span><span id="net-threat" class="font-bold">Scanning...</span></div>
+                <div class="bg-black p-3 border border-matrix-border/50"><span class="text-matrix-dim block text-xs uppercase">Inbound / Outbound</span><span id="net-security-status" class="block text-xs">Scanning...</span></div>
+            </div>
+        </div>
+
+        <!-- 2. BROWSER INFORMATION -->
+        <div class="bg-black/80 border border-matrix-border p-5 rounded-lg">
+            <h2 class="text-lg font-bold text-matrix-dim mb-4 uppercase tracking-widest border-l-4 border-matrix-border pl-3">
+                <i class="fa-brands fa-firefox-browser mr-2"></i>Browser Information
+            </h2>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
+                <div class="bg-black p-3 border border-matrix-border/50"><span class="text-matrix-dim block text-xs uppercase">Browser Name</span><span id="br-name" class="font-bold">Scanning...</span></div>
+                <div class="bg-black p-3 border border-matrix-border/50"><span class="text-matrix-dim block text-xs uppercase">Browser Version</span><span id="br-version" class="font-bold">Scanning...</span></div>
+                <div class="bg-black p-3 border border-matrix-border/50"><span class="text-matrix-dim block text-xs uppercase">Browser Engine</span><span id="br-engine" class="font-bold">Scanning...</span></div>
+                <div class="bg-black p-3 border border-matrix-border/50"><span class="text-matrix-dim block text-xs uppercase">JavaScript Enabled</span><span class="font-bold text-matrix-text">Yes</span></div>
+                
+                <div class="bg-black p-3 border border-matrix-border/50"><span class="text-matrix-dim block text-xs uppercase">Cookies Enabled</span><span id="br-cookies" class="font-bold">Scanning...</span></div>
+                <div class="bg-black p-3 border border-matrix-border/50"><span class="text-matrix-dim block text-xs uppercase">Local Storage</span><span id="br-localstorage" class="font-bold">Scanning...</span></div>
+                <div class="bg-black p-3 border border-matrix-border/50 col-span-1 sm:col-span-2"><span class="text-matrix-dim block text-xs uppercase">User Agent</span><span id="br-ua" class="text-xs break-all text-matrix-dim">Scanning...</span></div>
+            </div>
+        </div>
+
+        <!-- 3. OPERATING SYSTEM -->
+        <div class="bg-black/80 border border-matrix-border p-5 rounded-lg">
+            <h2 class="text-lg font-bold text-matrix-dim mb-4 uppercase tracking-widest border-l-4 border-matrix-border pl-3">
+                <i class="fa-solid fa-desktop mr-2"></i>Operating System & Hardware
+            </h2>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
+                <div class="bg-black p-3 border border-matrix-border/50"><span class="text-matrix-dim block text-xs uppercase">Operating System</span><span id="os-name" class="font-bold">Scanning...</span></div>
+                <div class="bg-black p-3 border border-matrix-border/50"><span class="text-matrix-dim block text-xs uppercase">Platform</span><span id="os-platform" class="font-bold">Scanning...</span></div>
+                <div class="bg-black p-3 border border-matrix-border/50"><span class="text-matrix-dim block text-xs uppercase">Architecture</span><span id="os-arch" class="font-bold">Scanning...</span></div>
+                <div class="bg-black p-3 border border-matrix-border/50"><span class="text-matrix-dim block text-xs uppercase">Device Type</span><span id="os-devicetype" class="font-bold">Scanning...</span></div>
+                
+                <div class="bg-black p-3 border border-matrix-border/50"><span class="text-matrix-dim block text-xs uppercase">CPU Cores</span><span id="hw-cores" class="font-bold">Scanning...</span></div>
+                <div class="bg-black p-3 border border-matrix-border/50"><span class="text-matrix-dim block text-xs uppercase">Memory (Approx)</span><span id="hw-memory" class="font-bold">Scanning...</span></div>
+                <div class="bg-black p-3 border border-matrix-border/50 col-span-1 sm:col-span-2 lg:col-span-2"><span class="text-matrix-dim block text-xs uppercase">GPU Renderer</span><span id="hw-gpu" class="text-xs truncate block text-matrix-text">Scanning...</span></div>
+            </div>
+        </div>
+
+        <!-- 4. SCREEN & DISPLAY -->
+        <div class="bg-black/80 border border-matrix-border p-5 rounded-lg">
+            <h2 class="text-lg font-bold text-matrix-dim mb-4 uppercase tracking-widest border-l-4 border-matrix-border pl-3">
+                <i class="fa-solid fa-tv mr-2"></i>Screen & Display
+            </h2>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
+                <div class="bg-black p-3 border border-matrix-border/50"><span class="text-matrix-dim block text-xs uppercase">Screen Resolution</span><span id="scr-res" class="font-bold">Scanning...</span></div>
+                <div class="bg-black p-3 border border-matrix-border/50"><span class="text-matrix-dim block text-xs uppercase">Available Resolution</span><span id="scr-avail" class="font-bold">Scanning...</span></div>
+                <div class="bg-black p-3 border border-matrix-border/50"><span class="text-matrix-dim block text-xs uppercase">Browser Window Size</span><span id="scr-window" class="font-bold">Scanning...</span></div>
+                <div class="bg-black p-3 border border-matrix-border/50"><span class="text-matrix-dim block text-xs uppercase">Viewport Size</span><span id="scr-viewport" class="font-bold">Scanning...</span></div>
+                
+                <div class="bg-black p-3 border border-matrix-border/50"><span class="text-matrix-dim block text-xs uppercase">Color Depth</span><span id="scr-color" class="font-bold">Scanning...</span></div>
+                <div class="bg-black p-3 border border-matrix-border/50"><span class="text-matrix-dim block text-xs uppercase">Pixel Ratio</span><span id="scr-dpr" class="font-bold">Scanning...</span></div>
+                <div class="bg-black p-3 border border-matrix-border/50"><span class="text-matrix-dim block text-xs uppercase">Orientation</span><span id="scr-orientation" class="font-bold">Scanning...</span></div>
+                <div class="bg-black p-3 border border-matrix-border/50"><span class="text-matrix-dim block text-xs uppercase">Touch Support</span><span id="scr-touch" class="font-bold">Scanning...</span></div>
+            </div>
+        </div>
+
+        <!-- 5. NETWORK & CONNECTION -->
+        <div class="bg-black/80 border border-matrix-border p-5 rounded-lg">
+            <h2 class="text-lg font-bold text-matrix-dim mb-4 uppercase tracking-widest border-l-4 border-matrix-border pl-3">
+                <i class="fa-solid fa-wifi mr-2"></i>Network & Connection API
+            </h2>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
+                <div class="bg-black p-3 border border-matrix-border/50"><span class="text-matrix-dim block text-xs uppercase">Connection Type</span><span id="conn-type" class="font-bold">Scanning...</span></div>
+                <div class="bg-black p-3 border border-matrix-border/50"><span class="text-matrix-dim block text-xs uppercase">Effective Type</span><span id="conn-eff" class="font-bold">Scanning...</span></div>
+                <div class="bg-black p-3 border border-matrix-border/50"><span class="text-matrix-dim block text-xs uppercase">Downlink Speed</span><span id="conn-downlink" class="font-bold">Scanning...</span></div>
+                <div class="bg-black p-3 border border-matrix-border/50"><span class="text-matrix-dim block text-xs uppercase">RTT (Ping)</span><span id="conn-rtt" class="font-bold">Scanning...</span></div>
+
+                <div class="bg-black p-3 border border-matrix-border/50"><span class="text-matrix-dim block text-xs uppercase">Online Status</span><span id="conn-online" class="font-bold">Scanning...</span></div>
+                <div class="bg-black p-3 border border-matrix-border/50"><span class="text-matrix-dim block text-xs uppercase">Do Not Track</span><span id="conn-dnt" class="font-bold">Scanning...</span></div>
+            </div>
+        </div>
+
+        <!-- 6. BROWSER CAPABILITIES & APIs -->
+        <div class="bg-black/80 border border-matrix-border p-5 rounded-lg">
+            <h2 class="text-lg font-bold text-matrix-dim mb-4 uppercase tracking-widest border-l-4 border-matrix-border pl-3">
+                <i class="fa-solid fa-cogs mr-2"></i>Browser Capabilities & APIs
+            </h2>
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
+                <div class="bg-black p-3 border border-matrix-border/50"><span class="text-matrix-dim block text-xs uppercase">WebGL Support</span><span id="cap-webgl" class="font-bold">Checking...</span></div>
+                <div class="bg-black p-3 border border-matrix-border/50"><span class="text-matrix-dim block text-xs uppercase">WebRTC Support</span><span id="cap-webrtc" class="font-bold">Checking...</span></div>
+                <div class="bg-black p-3 border border-matrix-border/50"><span class="text-matrix-dim block text-xs uppercase">Geolocation API</span><span id="cap-geo" class="font-bold">Checking...</span></div>
+                <div class="bg-black p-3 border border-matrix-border/50"><span class="text-matrix-dim block text-xs uppercase">Service Worker</span><span id="cap-sw" class="font-bold">Checking...</span></div>
+
+                <div class="bg-black p-3 border border-matrix-border/50"><span class="text-matrix-dim block text-xs uppercase">WebSocket Support</span><span id="cap-ws" class="font-bold">Checking...</span></div>
+                <div class="bg-black p-3 border border-matrix-border/50"><span class="text-matrix-dim block text-xs uppercase">IndexedDB Support</span><span id="cap-idb" class="font-bold">Checking...</span></div>
+                <div class="bg-black p-3 border border-matrix-border/50"><span class="text-matrix-dim block text-xs uppercase">Canvas Support</span><span id="cap-canvas" class="font-bold">Checking...</span></div>
+                <div class="bg-black p-3 border border-matrix-border/50"><span class="text-matrix-dim block text-xs uppercase">WebAssembly</span><span id="cap-wasm" class="font-bold">Checking...</span></div>
+            </div>
+        </div>
+
+        <!-- 7. LANGUAGES & TIME -->
+        <div class="bg-black/80 border border-matrix-border p-5 rounded-lg">
+            <h2 class="text-lg font-bold text-matrix-dim mb-4 uppercase tracking-widest border-l-4 border-matrix-border pl-3">
+                <i class="fa-solid fa-clock mr-2"></i>Languages & Time
+            </h2>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
+                <div class="bg-black p-3 border border-matrix-border/50"><span class="text-matrix-dim block text-xs uppercase">Languages</span><span id="time-langs" class="font-bold text-xs">Scanning...</span></div>
+                <div class="bg-black p-3 border border-matrix-border/50"><span class="text-matrix-dim block text-xs uppercase">Timezone</span><span id="time-zone" class="font-bold">Scanning...</span></div>
+                <div class="bg-black p-3 border border-matrix-border/50"><span class="text-matrix-dim block text-xs uppercase">Current Time</span><span id="time-current" class="font-bold text-xs">Scanning...</span></div>
+                <div class="bg-black p-3 border border-matrix-border/50"><span class="text-matrix-dim block text-xs uppercase">UTC Offset</span><span id="time-utcoffset" class="font-bold">Scanning...</span></div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- FOOTER -->
+    <footer class="max-w-7xl mx-w-full w-full mx-auto mt-10 pt-6 border-t border-matrix-border bg-black/90 p-4 rounded-xl flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-matrix-dim">
+        <div>
+            <a href="https://www.sujahat.com" target="_blank" class="text-matrix-text hover:underline font-bold tracking-wider">www.sujahat.com</a>
+            <span class="ml-2 text-xs opacity-70">&copy; 2026 All Rights Reserved</span>
+        </div>
+        <div class="flex items-center space-x-5 text-lg">
+            <a href="https://x.com/_sujahat" target="_blank" aria-label="X (Twitter)" class="text-matrix-dim hover:text-matrix-text transition duration-200">
+                <i class="fa-brands fa-x-twitter"></i>
+            </a>
+            <a href="https://www.facebook.com/sujahat" target="_blank" aria-label="Facebook" class="text-matrix-dim hover:text-matrix-text transition duration-200">
+                <i class="fa-brands fa-facebook"></i>
+            </a>
+            <a href="https://www.linkedin.com/in/sujahat/" target="_blank" aria-label="LinkedIn" class="text-matrix-dim hover:text-matrix-text transition duration-200">
+                <i class="fa-brands fa-linkedin"></i>
+            </a>
+            <a href="https://github.com/sujahat" target="_blank" aria-label="GitHub" class="text-matrix-dim hover:text-matrix-text transition duration-200">
+                <i class="fa-brands fa-github"></i>
+            </a>
+            <a href="https://discord.com/users/sujahat" target="_blank" aria-label="Discord" class="text-matrix-dim hover:text-matrix-text transition duration-200">
+                <i class="fa-brands fa-discord"></i>
+            </a>
+        </div>
+    </footer>
+
+    <!-- SCRIPT LOGIC -->
+    <script>
+        // Matrix Rain Animation Engine
+        const canvas = document.getElementById('matrix-bg');
+        const ctx = canvas.getContext('2d');
+
+        let width, height, columns, drops;
+        const chars = "01アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲンABCDEFGHIJKLMNOPQRSTUVWXYZ";
+
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+            columns = Math.floor(width / 18);
+            drops = new Array(columns).fill(1);
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        function drawMatrix() {
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.08)';
+            ctx.fillRect(0, 0, width, height);
+
+            ctx.fillStyle = '#00FF41';
+            ctx.font = '15pt monospace';
+
+            for (let i = 0; i < drops.length; i++) {
+                const text = chars[Math.floor(Math.random() * chars.length)];
+                ctx.fillText(text, i * 18, drops[i] * 18);
+
+                if (drops[i] * 18 > height && Math.random() > 0.975) {
+                    drops[i] = 0;
+                }
+                drops[i]++;
+            }
+        }
+        setInterval(drawMatrix, 40);
+
+        // Form Submission Handler
+        function handleSplashSubmit(event) {
+            event.preventDefault();
+            const nameInput = document.getElementById('visitor-name-input');
+            const name = nameInput.value.trim();
+            if (!name) return;
+
+            const splash = document.getElementById('splash-screen');
+            splash.style.opacity = '0';
+            
+            setTimeout(() => {
+                splash.style.display = 'none';
+                const dashboard = document.getElementById('dashboard');
+                dashboard.classList.remove('hidden');
+                setTimeout(() => dashboard.classList.remove('opacity-0'), 50);
+                
+                document.getElementById('welcome-banner').innerText = `ACCESS GRANTED: WELCOME, ${name}`;
+                runAllDiagnostics();
+            }, 500);
+        }
+
+        function runAllDiagnostics() {
+            fetchNetworkData();
+            fetchDeviceAndBrowserData();
+        }
+
+        function fetchDeviceAndBrowserData() {
+            const ua = navigator.userAgent;
+
+            // Browser Detection
+            let browserName = "Unknown";
+            let browserVersion = "Unknown";
+            let browserEngine = "Blink";
+
+            if (ua.indexOf("Edg/") !== -1) {
+                browserName = "Microsoft Edge";
+                browserVersion = ua.match(/Edg\/([0-9.]+)/)?.[1] || "Unknown";
+            } else if (ua.indexOf("Chrome/") !== -1 && ua.indexOf("Edg") === -1) {
+                browserName = "Google Chrome";
+                browserVersion = ua.match(/Chrome\/([0-9.]+)/)?.[1] || "Unknown";
+            } else if (ua.indexOf("Firefox/") !== -1) {
+                browserName = "Mozilla Firefox";
+                browserVersion = ua.match(/Firefox\/([0-9.]+)/)?.[1] || "Unknown";
+                browserEngine = "Gecko";
+            } else if (ua.indexOf("Safari/") !== -1 && ua.indexOf("Chrome") === -1) {
+                browserName = "Apple Safari";
+                browserVersion = ua.match(/Version\/([0-9.]+)/)?.[1] || "Unknown";
+                browserEngine = "WebKit";
+            }
+
+            document.getElementById('br-name').innerText = browserName;
+            document.getElementById('br-version').innerText = browserVersion;
+            document.getElementById('br-engine').innerText = browserEngine;
+            document.getElementById('br-cookies').innerText = navigator.cookieEnabled ? "Enabled" : "Disabled";
+            
+            let lsEnabled = "Disabled";
+            try {
+                localStorage.setItem('test', 'test');
+                localStorage.removeItem('test');
+                lsEnabled = "Enabled";
+            } catch(e) {}
+            document.getElementById('br-localstorage').innerText = lsEnabled;
+            document.getElementById('br-ua').innerText = ua;
+
+            // OS & Hardware
+            let osName = "Unknown";
+            if (ua.indexOf("Win") !== -1) osName = "Windows";
+            else if (ua.indexOf("Mac") !== -1) osName = "macOS";
+            else if (ua.indexOf("Linux") !== -1) osName = "Linux";
+            else if (ua.indexOf("Android") !== -1) osName = "Android";
+            else if (ua.indexOf("like Mac") !== -1) osName = "iOS";
+
+            document.getElementById('os-name').innerText = osName;
+            document.getElementById('os-platform').innerText = navigator.platform || "Unknown";
+            document.getElementById('os-arch').innerText = navigator.userAgentData?.platform || navigator.platform || "Win32";
+            
+            let deviceType = "Desktop";
+            if (/Mobi|Android/i.test(ua)) deviceType = "Mobile Device";
+            else if (/Tablet|iPad/i.test(ua)) deviceType = "Tablet";
+            document.getElementById('os-devicetype').innerText = deviceType;
+
+            document.getElementById('hw-cores').innerText = navigator.hardwareConcurrency ? `${navigator.hardwareConcurrency} Cores` : "Unknown";
+            document.getElementById('hw-memory').innerText = navigator.deviceMemory ? `~${navigator.deviceMemory} GB` : "Not Shared";
+
+            // WebGL Renderer
+            try {
+                const canvasEl = document.createElement('canvas');
+                const gl = canvasEl.getContext('webgl') || canvasEl.getContext('experimental-webgl');
+                const debugInfo = gl?.getExtension('WEBGL_debug_renderer_info');
+                if (debugInfo) {
+                    document.getElementById('hw-gpu').innerText = gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL);
+                } else {
+                    document.getElementById('hw-gpu').innerText = "Restricted / Hidden";
+                }
+            } catch(e) {
+                document.getElementById('hw-gpu').innerText = "Unavailable";
+            }
+
+            // Screen & Display
+            document.getElementById('scr-res').innerText = `${window.screen.width} × ${window.screen.height}`;
+            document.getElementById('scr-avail').innerText = `${window.screen.availWidth} × ${window.screen.availHeight}`;
+            document.getElementById('scr-window').innerText = `${window.outerWidth} × ${window.outerHeight}`;
+            document.getElementById('scr-viewport').innerText = `${window.innerWidth} × ${window.innerHeight}`;
+            document.getElementById('scr-color').innerText = `${window.screen.colorDepth}-bit`;
+            document.getElementById('scr-dpr').innerText = `${window.devicePixelRatio || 1}`;
+            
+            let orientationStr = "landscape-primary";
+            if (window.screen.orientation && window.screen.orientation.type) {
+                orientationStr = window.screen.orientation.type;
+            } else if (window.innerHeight > window.innerWidth) {
+                orientationStr = "portrait-primary";
+            }
+            document.getElementById('scr-orientation').innerText = orientationStr;
+            document.getElementById('scr-touch').innerText = (navigator.maxTouchPoints > 0) ? "Yes" : "No";
+
+            // Network Connection API
+            const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+            document.getElementById('conn-type').innerText = connection?.type?.toUpperCase() || "Unknown";
+            document.getElementById('conn-eff').innerText = connection?.effectiveType?.toUpperCase() || "4g";
+            document.getElementById('conn-downlink').innerText = connection?.downlink ? `${connection.downlink} Mbps` : "~10 Mbps";
+            document.getElementById('conn-rtt').innerText = connection?.rtt ? `${connection.rtt} ms` : "50 ms";
+            document.getElementById('conn-online').innerText = navigator.onLine ? "Online" : "Offline";
+            document.getElementById('conn-dnt').innerText = (navigator.doNotTrack === "1" || window.doNotTrack === "1") ? "Enabled" : "Disabled";
+
+            // Browser Capabilities
+            document.getElementById('cap-webgl').innerText = !!window.WebGLRenderingContext ? "Supported" : "Not Supported";
+            document.getElementById('cap-webrtc').innerText = !!(window.RTCPeerConnection || window.webkitRTCPeerConnection) ? "Supported" : "Not Supported";
+            document.getElementById('cap-geo').innerText = !!navigator.geolocation ? "Supported" : "Not Supported";
+            document.getElementById('cap-sw').innerText = !!navigator.serviceWorker ? "Supported" : "Not Supported";
+            document.getElementById('cap-ws').innerText = !!window.WebSocket ? "Supported" : "Not Supported";
+            document.getElementById('cap-idb').innerText = !!window.indexedDB ? "Supported" : "Not Supported";
+            document.getElementById('cap-canvas').innerText = !!document.createElement('canvas').getContext('2d') ? "Supported" : "Not Supported";
+            document.getElementById('cap-wasm').innerText = typeof WebAssembly === "object" ? "Supported" : "Not Supported";
+
+            // Languages & Time
+            const languagesList = navigator.languages ? navigator.languages.join(", ") : (navigator.language || "en-US");
+            document.getElementById('time-langs').innerText = languagesList;
+            
+            const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+            document.getElementById('time-zone').innerText = tz;
+            
+            const now = new Date();
+            document.getElementById('time-current').innerText = now.toLocaleString();
+            
+            // UTC Offset calculation
+            const offsetMinutes = -now.getTimezoneOffset();
+            const sign = offsetMinutes >= 0 ? "+" : "-";
+            const absHours = String(Math.floor(Math.abs(offsetMinutes) / 60)).padStart(2, '0');
+            const absMins = String(Math.abs(offsetMinutes) % 60).padStart(2, '0');
+            document.getElementById('time-utcoffset').innerText = `UTC${sign}${absHours}:${absMins}`;
+        }
+
+        async function fetchNetworkData() {
+            try {
+                const response = await fetch('https://ipapi.co/json/');
+                const data = await response.json();
+
+                if (!data.error) {
+                    document.getElementById('net-ip').innerText = data.ip;
+                    document.getElementById('net-country').innerText = `${data.country_name || 'N/A'} (${data.country || 'N/A'})`;
+                    document.getElementById('net-state').innerText = data.region || 'N/A';
+                    document.getElementById('net-city').innerText = data.city || 'N/A';
+                    document.getElementById('net-postal').innerText = data.postal || 'N/A';
+                    document.getElementById('net-coords').innerText = `${data.latitude}, ${data.longitude}`;
+                    document.getElementById('net-isp').innerText = data.org || 'Unknown ISP';
+                    document.getElementById('net-asn').innerText = data.asn ? `AS${data.asn}` : 'N/A';
+                    
+                    const isHosting = data.hosting === true;
+                    document.getElementById('net-proxy').innerText = isHosting ? "Proxy/VPN: Yes" : "Proxy/VPN: No";
+                    document.getElementById('net-hosting').innerText = isHosting ? "Yes ⚠️" : "No ✅";
+                    document.getElementById('net-threat').innerText = isHosting ? "Elevated ⚠️" : "Low (Safe) ✅";
+                    document.getElementById('net-security-status').innerText = "Inbound: Safe | Outbound: Safe";
+                } else {
+                    fallbackIpCheck();
+                }
+            } catch (err) {
+                fallbackIpCheck();
+            }
+        }
+
+        async function fallbackIpCheck() {
+            try {
+                const res = await fetch('http://ip-api.com/json/');
+                const data = await res.json();
+                if (data.status === 'success') {
+                    document.getElementById('net-ip').innerText = data.query;
+                    document.getElementById('net-country').innerText = `${data.country || 'N/A'} (${data.countryCode || 'N/A'})`;
+                    document.getElementById('net-state').innerText = data.regionName || 'N/A';
+                    document.getElementById('net-city').innerText = data.city || 'N/A';
+                    document.getElementById('net-postal').innerText = data.zip || 'N/A';
+                    document.getElementById('net-coords').innerText = `${data.lat}, ${data.lon}`;
+                    document.getElementById('net-isp').innerText = data.isp || data.org || 'N/A';
+                    document.getElementById('net-asn').innerText = data.as || 'N/A';
+                    
+                    document.getElementById('net-proxy').innerText = "Proxy/VPN: No";
+                    document.getElementById('net-hosting').innerText = "No ✅";
+                    document.getElementById('net-threat').innerText = "Low (Safe) ✅";
+                    document.getElementById('net-security-status').innerText = "Inbound: Safe | Outbound: Safe";
+                } else {
+                    throw new Error();
+                }
+            } catch (e) {
+                document.getElementById('net-ip').innerText = 'Adblocker / Restricted';
+                document.getElementById('net-country').innerText = 'Unavailable';
+                document.getElementById('net-state').innerText = 'Unavailable';
+                document.getElementById('net-city').innerText = 'Unavailable';
+                document.getElementById('net-isp').innerText = 'Unavailable';
+            }
+        }
+    </script>
+</body>
+</html>
