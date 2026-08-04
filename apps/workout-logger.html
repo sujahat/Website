@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Training Log</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#15181d;
+    --ink-2:#101317;
+    --surface:#1e222a;
+    --surface-2:#262b34;
+    --line:#2c3138;
+    --chalk:#eae7e0;
+    --fog:#868d9a;
+    --fog-dim:#5b6270;
+    --volt:#f5c518;
+    --volt-dim:#8c7a24;
+    --ember:#ff5a36;
+    --ember-dim:#5c2c1f;
+    --radius:14px;
+    --radius-sm:9px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--ink);
+    color:var(--chalk);
+    font-family:'Inter',system-ui,sans-serif;
+    -webkit-font-smoothing:antialiased;
+    min-height:100vh;
+    padding-bottom:env(safe-area-inset-bottom);
+  }
+  .app{
+    max-width:520px;
+    margin:0 auto;
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+    position:relative;
+  }
+  h1,h2,h3{font-family:'Oswald',sans-serif; margin:0; text-transform:uppercase;}
+  .mono{font-family:'IBM Plex Mono',monospace; font-variant-numeric:tabular-nums;}
+
+  /* Topbar */
+  .topbar{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:20px 20px 14px;
+    position:sticky; top:0; z-index:20;
+    background:linear-gradient(var(--ink) 80%, transparent);
+  }
+  .brand{display:flex; align-items:center; gap:9px;}
+  .brand-mark{
+    width:11px; height:11px; border-radius:50%;
+    background:var(--volt);
+    box-shadow:0 0 10px 1px rgba(245,197,24,0.55);
+    flex:none;
+  }
+  .brand h1{font-size:19px; letter-spacing:1.5px; font-weight:700; color:var(--chalk);}
+  .unit-toggle{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:12px; font-weight:600; letter-spacing:0.5px;
+    background:var(--surface); color:var(--fog);
+    border:1px solid var(--line); border-radius:100px;
+    padding:7px 13px; cursor:pointer;
+  }
+  .unit-toggle:active{transform:scale(0.95);}
+
+  main{flex:1; padding:0 20px 120px;}
+
+  /* Empty / start state */
+  .start-card{
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:32px 22px;
+    text-align:center;
+    margin-top:10px;
+  }
+  .start-card .eyebrow{
+    color:var(--volt); font-family:'IBM Plex Mono',monospace;
+    font-size:11px; letter-spacing:2px; margin-bottom:10px; display:block;
+  }
+  .start-card h2{font-size:24px; color:var(--chalk); margin-bottom:8px; letter-spacing:0.5px;}
+  .start-card p{color:var(--fog); font-size:14px; line-height:1.5; margin:0 0 22px;}
+  .btn-primary{
+    background:var(--volt); color:var(--ink-2);
+    border:none; border-radius:100px;
+    font-family:'Oswald',sans-serif; font-weight:600; letter-spacing:0.5px;
+    text-transform:uppercase; font-size:15px;
+    padding:15px 30px; cursor:pointer; width:100%;
+    transition:transform 0.1s ease;
+  }
+  .btn-primary:active{transform:scale(0.97);}
+
+  /* Scoreboard */
+  .scoreboard{
+    display:flex; justify-content:space-between;
+    background:var(--surface); border:1px solid var(--line);
+    border-radius:var(--radius); padding:16px 18px; margin:14px 0 12px;
+  }
+  .stat{text-align:left;}
+  .stat .num{font-size:22px; font-weight:600; color:var(--volt); line-height:1;}
+  .stat .lbl{font-size:10px; color:var(--fog); letter-spacing:1.5px; margin-top:5px;}
+
+  /* Pulse bar */
+  .pulse{
+    display:flex; align-items:flex-end; gap:3px;
+    height:26px; margin:0 0 20px; padding:0 2px;
+  }
+  .pulse-tick{
+    flex:1; background:var(--volt-dim); border-radius:2px;
+    min-width:3px; max-width:14px;
+    animation:grow 0.35s ease-out;
+    transform-origin:bottom;
+  }
+  .pulse-tick.active{background:var(--volt);}
+  @keyframes grow{from{transform:scaleY(0);} to{transform:scaleY(1);}}
+
+  .session-meta{
+    display:flex; align-items:center; justify-content:space-between;
+    margin-bottom:2px;
+  }
+  .session-meta .date{font-size:13px; color:var(--fog);}
+  .badge-ended{
+    font-size:10px; letter-spacing:1px; font-weight:600;
+    color:var(--fog); background:var(--surface-2);
+    padding:4px 9px; border-radius:100px; text-transform:uppercase;
+  }
+
+  /* Exercise cards */
+  .exercise-list{display:flex; flex-direction:column; gap:10px; margin-bottom:16px;}
+  .ex-card{
+    background:var(--surface); border:1px solid var(--line);
+    border-radius:var(--radius-sm); padding:14px 14px 12px;
+    animation:slideIn 0.28s ease-out;
+  }
+  @keyframes slideIn{from{opacity:0; transform:translateY(8px);} to{opacity:1; transform:translateY(0);}}
+  .ex-top{display:flex; justify-content:space-between; align-items:flex-start; gap:10px;}
+  .ex-name{font-family:'Oswald',sans-serif; font-size:16px; font-weight:600; letter-spacing:0.3px; color:var(--chalk);}
+  .ex-remove{
+    background:none; border:none; color:var(--fog-dim);
+    font-size:18px; line-height:1; cursor:pointer; padding:2px 4px;
+    flex:none;
+  }
+  .ex-remove:active{color:var(--ember);}
+  .ex-badges{display:flex; gap:8px; margin-top:9px; flex-wrap:wrap;}
+  .ex-badge{
+    font-family:'IBM Plex Mono',monospace; font-size:12.5px; font-weight:600;
+    background:var(--surface-2); color:var(--chalk);
+    border-radius:7px; padding:5px 9px;
+  }
+  .ex-badge.weight{color:var(--volt);}
+
+  /* Sticky add bar */
+  .add-bar{
+    position:sticky; bottom:0; left:0; right:0;
+    padding:14px 0 calc(14px + env(safe-area-inset-bottom));
+    background:linear-gradient(transparent, var(--ink) 30%);
+    display:flex; gap:10px; margin-top:auto;
+  }
+  .btn-add{
+    flex:1; background:var(--volt); color:var(--ink-2);
+    border:none; border-radius:100px; font-family:'Oswald',sans-serif;
+    font-weight:600; letter-spacing:0.5px; text-transform:uppercase;
+    font-size:14.5px; padding:14px; cursor:pointer;
+  }
+  .btn-add:active{transform:scale(0.97);}
+  .btn-end{
+    background:var(--surface); color:var(--fog);
+    border:1px solid var(--line); border-radius:100px;
+    font-family:'Oswald',sans-serif; font-weight:600; font-size:13px;
+    letter-spacing:0.5px; text-transform:uppercase;
+    padding:14px 16px; cursor:pointer;
+  }
+  .btn-end:active{transform:scale(0.97);}
+
+  /* History */
+  #historySection{margin-top:26px;}
+  #historySection h2{font-size:14px; letter-spacing:2px; color:var(--fog); margin-bottom:12px;}
+  .hist-row{
+    background:var(--surface); border:1px solid var(--line);
+    border-radius:var(--radius-sm); margin-bottom:8px; overflow:hidden;
+  }
+  .hist-head{
+    display:flex; justify-content:space-between; align-items:center;
+    padding:14px 15px; cursor:pointer;
+  }
+  .hist-date{font-size:14.5px; font-weight:600; color:var(--chalk);}
+  .hist-sub{font-size:12px; color:var(--fog); margin-top:3px;}
+  .hist-chev{color:var(--fog-dim); transition:transform 0.2s ease; font-size:13px;}
+  .hist-row.open .hist-chev{transform:rotate(180deg);}
+  .hist-body{
+    max-height:0; overflow:hidden; transition:max-height 0.25s ease;
+    padding:0 15px;
+  }
+  .hist-row.open .hist-body{padding:0 15px 14px;}
+  .hist-ex{
+    display:flex; justify-content:space-between; align-items:center;
+    padding:9px 0; border-top:1px solid var(--line);
+    font-size:13.5px;
+  }
+  .hist-ex .n{color:var(--chalk); font-weight:500;}
+  .hist-ex .d{color:var(--fog); font-family:'IBM Plex Mono',monospace; font-size:12.5px;}
+  .empty-hist{color:var(--fog-dim); font-size:13px; padding:18px 4px; text-align:center;}
+
+  /* Add sheet */
+  .sheet{position:fixed; inset:0; z-index:50;}
+  .sheet.hidden{display:none;}
+  .sheet-backdrop{position:absolute; inset:0; background:rgba(10,12,15,0.65);}
+  .sheet-panel{
+    position:absolute; left:0; right:0; bottom:0;
+    max-width:520px; margin:0 auto;
+    background:var(--ink-2); border-radius:20px 20px 0 0;
+    border:1px solid var(--line); border-bottom:none;
+    padding:22px 20px calc(22px + env(safe-area-inset-bottom));
+    animation:sheetUp 0.22s ease-out;
+  }
+  @keyframes sheetUp{from{transform:translateY(100%);} to{transform:translateY(0);}}
+  .sheet-panel h3{font-size:19px; margin-bottom:16px; color:var(--chalk);}
+  .field{margin-bottom:14px;}
+  .field label{
+    display:block; font-size:11px; letter-spacing:1.2px; color:var(--fog);
+    text-transform:uppercase; margin-bottom:6px; font-weight:600;
+  }
+  .field input{
+    width:100%; background:var(--surface); border:1px solid var(--line);
+    border-radius:10px; padding:13px 14px; color:var(--chalk);
+    font-family:'Inter',sans-serif; font-size:15px;
+  }
+  .field input:focus{outline:none; border-color:var(--volt);}
+  .row2{display:flex; gap:10px;}
+  .row2 .field{flex:1;}
+  .sheet-actions{display:flex; gap:10px; margin-top:6px;}
+  .btn-cancel{
+    flex:1; background:none; border:1px solid var(--line); color:var(--fog);
+    border-radius:100px; padding:14px; font-family:'Oswald',sans-serif;
+    font-weight:600; letter-spacing:0.5px; text-transform:uppercase;
+    font-size:14px; cursor:pointer;
+  }
+  .btn-save{
+    flex:2; background:var(--volt); color:var(--ink-2); border:none;
+    border-radius:100px; padding:14px; font-family:'Oswald',sans-serif;
+    font-weight:600; letter-spacing:0.5px; text-transform:uppercase;
+    font-size:14px; cursor:pointer;
+  }
+
+  .toast{
+    position:fixed; left:50%; bottom:24px; transform:translateX(-50%);
+    background:var(--surface-2); color:var(--chalk); border:1px solid var(--line);
+    padding:11px 18px; border-radius:100px; font-size:13px; z-index:100;
+    animation:toastIn 0.2s ease-out;
+  }
+  @keyframes toastIn{from{opacity:0; transform:translate(-50%,8px);} to{opacity:1; transform:translate(-50%,0);}}
+
+  @media (prefers-reduced-motion: reduce){
+    *{animation:none !important; transition:none !important;}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark"></span>
+      <h1>Training Log</h1>
+    </div>
+    <button class="unit-toggle" id="unitToggle">KG</button>
+  </header>
+
+  <main>
+    <section id="activeSection"></section>
+    <section id="historySection">
+      <h2>History</h2>
+      <div id="historyList"></div>
+    </section>
+  </main>
+</div>
+
+<div class="sheet hidden" id="addSheet">
+  <div class="sheet-backdrop" id="sheetBackdrop"></div>
+  <form class="sheet-panel" id="exerciseForm">
+    <h3>Add Exercise</h3>
+    <div class="field">
+      <label for="exName">Exercise name</label>
+      <input type="text" id="exName" placeholder="e.g. Barbell Squat" autocomplete="off" required>
+    </div>
+    <div class="row2">
+      <div class="field">
+        <label for="exSets">Sets</label>
+        <input type="number" id="exSets" min="1" step="1" placeholder="3" inputmode="numeric" required>
+      </div>
+      <div class="field">
+        <label for="exReps">Reps per set</label>
+        <input type="number" id="exReps" min="1" step="1" placeholder="10" inputmode="numeric" required>
+      </div>
+    </div>
+    <div class="field">
+      <label for="exWeight">Weight (optional)</label>
+      <input type="number" id="exWeight" min="0" step="0.5" placeholder="e.g. 60" inputmode="decimal">
+    </div>
+    <div class="sheet-actions">
+      <button type="button" class="btn-cancel" id="cancelAdd">Cancel</button>
+      <button type="submit" class="btn-save">Add to session</button>
+    </div>
+  </form>
+</div>
+
+<script>
+(function(){
+  const activeSection = document.getElementById('activeSection');
+  const historyList = document.getElementById('historyList');
+  const addSheet = document.getElementById('addSheet');
+  const exerciseForm = document.getElementById('exerciseForm');
+  const unitToggle = document.getElementById('unitToggle');
+
+  let unit = 'kg';
+  let today = null;       // date key string
+  let session = null;     // {date, startedAt, ended, endedAt, exercises:[]}
+  let historyMeta = [];   // [{date}]
+  let openHistoryDate = null;
+  let historyCache = {};  // date -> session object
+
+  function todayKey(){
+    const d = new Date();
+    return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  }
+  function prettyDate(key){
+    const [y,m,d] = key.split('-').map(Number);
+    const dt = new Date(y, m-1, d);
+    return dt.toLocaleDateString(undefined, {weekday:'short', month:'short', day:'numeric'});
+  }
+  function uid(){ return 'x'+Math.random().toString(36).slice(2,9); }
+
+  function showToast(msg){
+    const t = document.createElement('div');
+    t.className = 'toast';
+    t.textContent = msg;
+    document.body.appendChild(t);
+    setTimeout(()=>t.remove(), 2200);
+  }
+
+  async function saveSession(s){
+    try{
+      const res = await window.storage.set('session:'+s.date, JSON.stringify(s));
+      if(!res) showToast("Couldn't save — try again");
+      return !!res;
+    }catch(e){
+      showToast("Couldn't save — try again");
+      return false;
+    }
+  }
+
+  async function loadUnit(){
+    try{
+      const r = await window.storage.get('unit-pref');
+      if(r && r.value) unit = r.value;
+    }catch(e){ /* no pref set yet */ }
+    unitToggle.textContent = unit.toUpperCase();
+  }
+  async function toggleUnit(){
+    unit = unit === 'kg' ? 'lb' : 'kg';
+    unitToggle.textContent = unit.toUpperCase();
+    try{ await window.storage.set('unit-pref', unit); }catch(e){}
+    renderActive();
+    if(openHistoryDate) renderHistoryBody(openHistoryDate);
+  }
+
+  async function init(){
+    today = todayKey();
+    await loadUnit();
+    try{
+      const r = await window.storage.get('session:'+today);
+      if(r && r.value) session = JSON.parse(r.value);
+    }catch(e){ session = null; }
+
+    try{
+      const list = await window.storage.list('session:');
+      if(list && list.keys){
+        historyMeta = list.keys
+          .map(k => k.replace('session:',''))
+          .filter(d => d !== today)
+          .sort((a,b) => b.localeCompare(a));
+      }
+    }catch(e){ historyMeta = []; }
+
+    renderActive();
+    renderHistory();
+  }
+
+  function computeStats(ex){
+    const sets = ex.reduce((a,e)=>a+e.sets,0);
+    const reps = ex.reduce((a,e)=>a+e.sets*e.reps,0);
+    const volume = ex.reduce((a,e)=>a + (e.weight ? e.sets*e.reps*e.weight : 0),0);
+    return {sets,reps,volume};
+  }
+
+  function renderActive(){
+    if(!session){
+      activeSection.innerHTML = `
+        <div class="start-card">
+          <span class="eyebrow">READY WHEN YOU ARE</span>
+          <h2>No session today</h2>
+          <p>Start a session to begin logging exercises. Everything's saved as you go.</p>
+          <button class="btn-primary" id="startBtn">Start Session</button>
+        </div>`;
+      document.getElementById('startBtn').onclick = startSession;
+      return;
+    }
+
+    const ex = session.exercises;
+    const {sets,reps,volume} = computeStats(ex);
+    const ticks = ex.map(()=>`<div class="pulse-tick active" style="height:${Math.min(100, 30 + (ex.length?0:0))}%"></div>`).join('');
+    // vary tick height slightly by set count for visual texture
+    const tickEls = ex.map(e => {
+      const h = Math.max(30, Math.min(100, e.sets * 14 + 20));
+      return `<div class="pulse-tick active" style="height:${h}%"></div>`;
+    }).join('') || Array.from({length:8}).map(()=>`<div class="pulse-tick" style="height:18%"></div>`).join('');
+
+    const cards = ex.length ? ex.map(e => `
+      <div class="ex-card" data-id="${e.id}">
+        <div class="ex-top">
+          <div class="ex-name">${escapeHtml(e.name)}</div>
+          <button class="ex-remove" data-remove="${e.id}" aria-label="Remove exercise">✕</button>
+        </div>
+        <div class="ex-badges">
+          <span class="ex-badge">${e.sets} × ${e.reps}</span>
+          ${e.weight ? `<span class="ex-badge weight">${formatWeight(e.weight)}</span>` : ''}
+        </div>
+      </div>
+    `).join('') : `<div class="empty-hist">No exercises yet — tap "Add Exercise" below.</div>`;
+
+    activeSection.innerHTML = `
+      <div class="session-meta">
+        <span class="date">${prettyDate(session.date)}</span>
+        ${session.ended ? '<span class="badge-ended">Completed</span>' : ''}
+      </div>
+      <div class="scoreboard">
+        <div class="stat"><div class="num mono">${sets}</div><div class="lbl">SETS</div></div>
+        <div class="stat"><div class="num mono">${reps}</div><div class="lbl">REPS</div></div>
+        <div class="stat"><div class="num mono">${formatVolume(volume)}</div><div class="lbl">VOLUME</div></div>
+      </div>
+      <div class="pulse">${tickEls}</div>
+      <div class="exercise-list">${cards}</div>
+      ${session.ended ? `
+        <div class="add-bar">
+          <button class="btn-add" id="resumeBtn">Resume Session</button>
+        </div>
+      ` : `
+        <div class="add-bar">
+          <button class="btn-add" id="openAdd">+ Add Exercise</button>
+          <button class="btn-end" id="endBtn">End</button>
+        </div>
+      `}
+    `;
+
+    if(!session.ended){
+      document.getElementById('openAdd').onclick = openAddSheet;
+      document.getElementById('endBtn').onclick = endSession;
+    } else {
+      document.getElementById('resumeBtn').onclick = resumeSession;
+    }
+    activeSection.querySelectorAll('[data-remove]').forEach(btn=>{
+      btn.onclick = () => removeExercise(btn.getAttribute('data-remove'));
+    });
+  }
+
+  function formatWeight(w){
+    return unit === 'kg' ? `${w} kg` : `${w} lb`;
+  }
+  function formatVolume(v){
+    if(v === 0) return '—';
+    if(v >= 1000) return (v/1000).toFixed(1)+'k';
+    return String(Math.round(v));
+  }
+  function escapeHtml(s){
+    const d = document.createElement('div');
+    d.textContent = s;
+    return d.innerHTML;
+  }
+
+  async function startSession(){
+    session = {date: today, startedAt: Date.now(), ended:false, endedAt:null, exercises:[]};
+    await saveSession(session);
+    renderActive();
+  }
+  async function endSession(){
+    session.ended = true;
+    session.endedAt = Date.now();
+    await saveSession(session);
+    renderActive();
+    showToast('Session complete — nice work.');
+  }
+  async function resumeSession(){
+    session.ended = false;
+    await saveSession(session);
+    renderActive();
+  }
+  async function removeExercise(id){
+    session.exercises = session.exercises.filter(e => e.id !== id);
+    await saveSession(session);
+    renderActive();
+  }
+
+  function openAddSheet(){
+    exerciseForm.reset();
+    addSheet.classList.remove('hidden');
+    setTimeout(()=>document.getElementById('exName').focus(), 50);
+  }
+  function closeAddSheet(){
+    addSheet.classList.add('hidden');
+  }
+  document.getElementById('cancelAdd').onclick = closeAddSheet;
+  document.getElementById('sheetBackdrop').onclick = closeAddSheet;
+
+  exerciseForm.onsubmit = async (e) => {
+    e.preventDefault();
+    const name = document.getElementById('exName').value.trim();
+    const sets = parseInt(document.getElementById('exSets').value, 10);
+    const reps = parseInt(document.getElementById('exReps').value, 10);
+    const weightRaw = document.getElementById('exWeight').value;
+    const weight = weightRaw ? parseFloat(weightRaw) : null;
+
+    if(!name || !sets || !reps || sets < 1 || reps < 1){
+      showToast('Fill in name, sets and reps');
+      return;
+    }
+    if(!session){ await startSession(); }
+
+    session.exercises.push({id: uid(), name, sets, reps, weight});
+    const ok = await saveSession(session);
+    closeAddSheet();
+    renderActive();
+    if(ok) showToast(`${name} added`);
+  };
+
+  function renderHistory(){
+    if(!historyMeta.length){
+      historyList.innerHTML = `<div class="empty-hist">Past sessions will show up here once you complete a few.</div>`;
+      return;
+    }
+    historyList.innerHTML = historyMeta.map(date => `
+      <div class="hist-row" data-date="${date}">
+        <div class="hist-head" data-toggle="${date}">
+          <div>
+            <div class="hist-date">${prettyDate(date)}</div>
+            <div class="hist-sub" id="sub-${date}">…</div>
+          </div>
+          <div class="hist-chev">▾</div>
+        </div>
+        <div class="hist-body" id="body-${date}"></div>
+      </div>
+    `).join('');
+
+    historyList.querySelectorAll('[data-toggle]').forEach(el=>{
+      el.onclick = () => toggleHistory(el.getAttribute('data-toggle'));
+    });
+    historyMeta.forEach(loadHistorySummary);
+  }
+
+  async function loadHistorySummary(date){
+    const s = await fetchHistorySession(date);
+    const sub = document.getElementById('sub-'+date);
+    if(!sub || !s) return;
+    const {sets} = computeStats(s.exercises);
+    sub.textContent = `${s.exercises.length} exercise${s.exercises.length===1?'':'s'} · ${sets} sets`;
+  }
+
+  async function fetchHistorySession(date){
+    if(historyCache[date]) return historyCache[date];
+    try{
+      const r = await window.storage.get('session:'+date);
+      if(r && r.value){
+        const parsed = JSON.parse(r.value);
+        historyCache[date] = parsed;
+        return parsed;
+      }
+    }catch(e){ /* missing */ }
+    return null;
+  }
+
+  async function toggleHistory(date){
+    const row = document.querySelector(`.hist-row[data-date="${date}"]`);
+    const body = document.getElementById('body-'+date);
+    if(openHistoryDate === date){
+      row.classList.remove('open');
+      body.style.maxHeight = '0px';
+      openHistoryDate = null;
+      return;
+    }
+    if(openHistoryDate){
+      const prevRow = document.querySelector(`.hist-row[data-date="${openHistoryDate}"]`);
+      const prevBody = document.getElementById('body-'+openHistoryDate);
+      if(prevRow) prevRow.classList.remove('open');
+      if(prevBody) prevBody.style.maxHeight = '0px';
+    }
+    openHistoryDate = date;
+    row.classList.add('open');
+    await renderHistoryBody(date);
+    body.style.maxHeight = body.scrollHeight + 'px';
+  }
+
+  async function renderHistoryBody(date){
+    const body = document.getElementById('body-'+date);
+    if(!body) return;
+    const s = await fetchHistorySession(date);
+    if(!s || !s.exercises.length){
+      body.innerHTML = `<div class="empty-hist">No exercises logged.</div>`;
+    } else {
+      body.innerHTML = s.exercises.map(e => `
+        <div class="hist-ex">
+          <span class="n">${escapeHtml(e.name)}</span>
+          <span class="d">${e.sets}×${e.reps}${e.weight ? ' · '+formatWeight(e.weight) : ''}</span>
+        </div>
+      `).join('');
+    }
+    if(openHistoryDate === date) body.style.maxHeight = body.scrollHeight + 'px';
+  }
+
+  unitToggle.onclick = toggleUnit;
+
+  init();
+})();
+</script>
+</body>
+</html>
