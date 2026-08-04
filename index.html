@@ -53,6 +53,11 @@
             z-index: -1;
             opacity: 0.7;
         }
+
+        @media (prefers-reduced-motion: reduce) {
+            .glitch { animation: none; }
+            #matrix-bg { display: none; }
+        }
     </style>
 </head>
 <body class="bg-matrix-bg text-matrix-text font-mono min-h-screen p-2 sm:p-4 lg:p-6 selection:bg-matrix-text selection:text-black flex flex-col justify-between">
@@ -113,10 +118,8 @@
                 <div class="bg-black p-3 border border-matrix-border/50"><span class="text-matrix-dim block text-xs uppercase">ISP / Organization</span><span id="net-isp" class="block truncate">Scanning...</span></div>
                 <div class="bg-black p-3 border border-matrix-border/50"><span class="text-matrix-dim block text-xs uppercase">ASN</span><span id="net-asn" class="block text-xs truncate">Scanning...</span></div>
 
-                <div class="bg-black p-3 border border-matrix-border/50"><span class="text-matrix-dim block text-xs uppercase">Proxy / VPN / Tor</span><span id="net-proxy" class="font-bold text-xs">Scanning...</span></div>
-                <div class="bg-black p-3 border border-matrix-border/50"><span class="text-matrix-dim block text-xs uppercase">Hosting / Datacenter</span><span id="net-hosting" class="font-bold">Scanning...</span></div>
-                <div class="bg-black p-3 border border-matrix-border/50"><span class="text-matrix-dim block text-xs uppercase">Threat Level</span><span id="net-threat" class="font-bold">Scanning...</span></div>
-                <div class="bg-black p-3 border border-matrix-border/50"><span class="text-matrix-dim block text-xs uppercase">Inbound / Outbound</span><span id="net-security-status" class="block text-xs">Scanning...</span></div>
+                <div class="bg-black p-3 border border-matrix-border/50"><span class="text-matrix-dim block text-xs uppercase">Hosting / Datacenter (heuristic)</span><span id="net-hosting" class="font-bold">Scanning...</span></div>
+                <div class="bg-black p-3 border border-matrix-border/50"><span class="text-matrix-dim block text-xs uppercase">Connection Security</span><span id="net-security-status" class="block text-xs">Scanning...</span></div>
             </div>
         </div>
 
@@ -219,6 +222,40 @@
             </div>
         </div>
 
+        <!-- 8. APP SHOWCASE (mobile-sized frame) -->
+        <div class="bg-black/80 border border-matrix-border p-5 rounded-lg">
+            <h2 class="text-lg font-bold text-matrix-dim mb-4 uppercase tracking-widest border-l-4 border-matrix-border pl-3">
+                <i class="fa-solid fa-mobile-screen-button mr-2"></i>App Showcase
+            </h2>
+            <p class="text-matrix-dim text-xs mb-4">Live preview, sized like a phone. Reads <span class="text-matrix-text">apps/manifest.json</span></p>
+            <div class="flex justify-center">
+                <div class="relative w-[300px] h-[620px] bg-black border-4 border-matrix-border rounded-[2.5rem] shadow-[0_0_25px_rgba(0,255,65,0.15)] overflow-hidden flex flex-col">
+                    <!-- Notch -->
+                    <div class="absolute top-0 left-1/2 -translate-x-1/2 w-28 h-5 bg-black border-b border-x border-matrix-border rounded-b-xl z-20"></div>
+                    <!-- Status bar -->
+                    <div class="h-8 flex items-center justify-between px-4 text-[10px] text-matrix-text shrink-0">
+                        <span id="phone-clock">--:--</span>
+                        <span class="flex items-center gap-1"><i class="fa-solid fa-signal"></i><i class="fa-solid fa-wifi"></i><i class="fa-solid fa-battery-three-quarters"></i></span>
+                    </div>
+                    <!-- App bar (shown only while an app is open) -->
+                    <div id="phone-appbar" class="hidden items-center gap-2 px-3 py-2 border-b border-matrix-border/50 shrink-0">
+                        <button onclick="closePhoneApp()" class="text-matrix-text text-sm cursor-pointer"><i class="fa-solid fa-chevron-left mr-1"></i>Directory</button>
+                        <span id="phone-appname" class="text-xs text-matrix-dim truncate"></span>
+                    </div>
+                    <!-- Home / directory screen -->
+                    <div id="phone-home" class="flex-grow overflow-y-auto p-3 flex flex-col">
+                        <p class="text-matrix-dim text-[10px] uppercase tracking-widest mb-2 px-1">Directory // /apps</p>
+                        <div class="flex flex-col gap-2" id="phone-app-list"></div>
+                        <p id="phone-loading" class="text-matrix-dim text-xs text-center mt-10">Reading directory...</p>
+                        <p id="phone-empty" class="hidden text-matrix-dim text-xs text-center mt-10">No apps found in manifest.json.</p>
+                        <p id="phone-error" class="hidden text-matrix-dim text-xs text-center mt-10 px-2">Couldn't read apps/manifest.json — see chat for setup.</p>
+                    </div>
+                    <!-- App frame -->
+                    <iframe id="phone-frame" class="hidden flex-grow w-full border-0 bg-black" title="App preview"></iframe>
+                </div>
+            </div>
+        </div>
+
     </div>
 
     <!-- FOOTER -->
@@ -307,7 +344,136 @@
         function runAllDiagnostics() {
             fetchNetworkData();
             fetchDeviceAndBrowserData();
+            enhanceWithClientHints();
         }
+
+        // UA strings are being frozen/trimmed across browsers (Chrome especially), so
+        // browser/OS detection based on parsing them gets less accurate over time.
+        // Where User-Agent Client Hints is available (Chromium browsers), use it to
+        // overwrite the UA-parsed values with something more accurate. Firefox/Safari
+        // don't support it, so the UA-string parse above simply stands as-is for them.
+        async function enhanceWithClientHints() {
+            const uaData = navigator.userAgentData;
+            if (!uaData) return;
+            try {
+                const high = await uaData.getHighEntropyValues(['platformVersion', 'fullVersionList', 'architecture', 'bitness']);
+                const brandList = high.fullVersionList || uaData.brands || [];
+                const brand = brandList.find(b => !/Not.A.Brand|Not;A/i.test(b.brand)) || brandList[0];
+
+                if (brand) {
+                    document.getElementById('br-name').innerText = brand.brand;
+                    document.getElementById('br-version').innerText = brand.version;
+                }
+                if (uaData.platform) {
+                    document.getElementById('os-name').innerText = uaData.platform;
+                    document.getElementById('os-platform').innerText = high.platformVersion
+                        ? `${uaData.platform} ${high.platformVersion}`
+                        : uaData.platform;
+                }
+                if (high.architecture) {
+                    document.getElementById('os-arch').innerText = `${high.architecture}${high.bitness ? ' ' + high.bitness + '-bit' : ''}`;
+                }
+            } catch (e) {
+                // Client Hints call blocked/unsupported in this context — the baseline
+                // UA-string values already rendered above stay as they are.
+            }
+        }
+
+        // ── APP SHOWCASE ───────────────────────────────────────────────────
+        // A static HTML page can't ask a server "list the files in this folder" —
+        // browsers don't expose real directory listings, and most static hosts
+        // (GitHub Pages, Netlify, Vercel) don't serve them either. The practical
+        // stand-in is apps/manifest.json: add a filename there and it shows up
+        // in the directory below automatically, no HTML/JS editing required.
+        let APPS = [];
+
+        async function loadAppDirectory() {
+            const loading = document.getElementById('phone-loading');
+            const error = document.getElementById('phone-error');
+            try {
+                const res = await fetch('apps/manifest.json', { cache: 'no-store' });
+                if (!res.ok) throw new Error('manifest not found');
+                const raw = await res.json();
+
+                APPS = raw.map(entry => {
+                    if (typeof entry === 'string') {
+                        return { file: `apps/${entry}`, name: filenameToTitle(entry), icon: 'fa-solid fa-window-maximize' };
+                    }
+                    return {
+                        file: entry.file.startsWith('apps/') ? entry.file : `apps/${entry.file}`,
+                        name: entry.name || filenameToTitle(entry.file),
+                        icon: entry.icon || 'fa-solid fa-window-maximize'
+                    };
+                });
+
+                loading.classList.add('hidden');
+                renderAppList();
+            } catch (e) {
+                loading.classList.add('hidden');
+                error.classList.remove('hidden');
+            }
+        }
+
+        function filenameToTitle(filename) {
+            return filename.replace(/\.html?$/i, '').replace(/[-_]+/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+        }
+
+        function renderAppList() {
+            const list = document.getElementById('phone-app-list');
+            const empty = document.getElementById('phone-empty');
+            list.innerHTML = '';
+            if (!APPS.length) {
+                empty.classList.remove('hidden');
+                return;
+            }
+            empty.classList.add('hidden');
+            APPS.forEach((app, i) => {
+                const row = document.createElement('button');
+                row.className = "flex items-center gap-3 text-left px-3 py-2 border border-matrix-border/50 hover:border-matrix-text bg-black/60 transition cursor-pointer";
+                row.onclick = () => openPhoneApp(i);
+                row.innerHTML = `
+                    <i class="${app.icon} text-matrix-text w-4 text-center"></i>
+                    <span class="text-xs text-matrix-text truncate flex-grow">${app.name}</span>
+                    <i class="fa-solid fa-chevron-right text-matrix-dim text-[10px]"></i>
+                `;
+                list.appendChild(row);
+            });
+        }
+
+        function openPhoneApp(i) {
+            const app = APPS[i];
+            if (!app) return;
+            document.getElementById('phone-home').classList.add('hidden');
+
+            const frame = document.getElementById('phone-frame');
+            frame.src = app.file;
+            frame.classList.remove('hidden');
+            frame.classList.add('flex');
+
+            const appbar = document.getElementById('phone-appbar');
+            appbar.classList.remove('hidden');
+            appbar.classList.add('flex');
+            document.getElementById('phone-appname').innerText = app.name;
+        }
+
+        function closePhoneApp() {
+            const frame = document.getElementById('phone-frame');
+            frame.src = '';
+            frame.classList.add('hidden');
+            frame.classList.remove('flex');
+            document.getElementById('phone-appbar').classList.add('hidden');
+            document.getElementById('phone-appbar').classList.remove('flex');
+            document.getElementById('phone-home').classList.remove('hidden');
+        }
+
+        function updatePhoneClock() {
+            const el = document.getElementById('phone-clock');
+            if (el) el.innerText = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        }
+
+        loadAppDirectory();
+        updatePhoneClock();
+        setInterval(updatePhoneClock, 15000);
 
         function fetchDeviceAndBrowserData() {
             const ua = navigator.userAgent;
@@ -449,12 +615,11 @@
                     document.getElementById('net-coords').innerText = `${data.latitude}, ${data.longitude}`;
                     document.getElementById('net-isp').innerText = data.org || 'Unknown ISP';
                     document.getElementById('net-asn').innerText = data.asn ? `AS${data.asn}` : 'N/A';
-                    
-                    const isHosting = data.hosting === true;
-                    document.getElementById('net-proxy').innerText = isHosting ? "Proxy/VPN: Yes" : "Proxy/VPN: No";
-                    document.getElementById('net-hosting').innerText = isHosting ? "Yes ⚠️" : "No ✅";
-                    document.getElementById('net-threat').innerText = isHosting ? "Elevated ⚠️" : "Low (Safe) ✅";
-                    document.getElementById('net-security-status').innerText = "Inbound: Safe | Outbound: Safe";
+
+                    // ipapi.co's free tier doesn't return a `hosting` flag, so treat it as
+                    // an honest "no signal" case rather than defaulting to false/"safe".
+                    renderHostingFlag(typeof data.hosting === 'boolean' ? data.hosting : null);
+                    renderSecurityStatus();
                 } else {
                     fallbackIpCheck();
                 }
@@ -463,34 +628,57 @@
             }
         }
 
+        // Fallback also runs entirely over HTTPS — the old http:// fallback would get
+        // silently blocked as mixed content on any page served over https, which showed
+        // up as a false "Adblocker" message even when nothing was blocking anything.
         async function fallbackIpCheck() {
             try {
-                const res = await fetch('http://ip-api.com/json/');
+                const res = await fetch('https://ipwho.is/');
                 const data = await res.json();
-                if (data.status === 'success') {
-                    document.getElementById('net-ip').innerText = data.query;
-                    document.getElementById('net-country').innerText = `${data.country || 'N/A'} (${data.countryCode || 'N/A'})`;
-                    document.getElementById('net-state').innerText = data.regionName || 'N/A';
+                if (data.success !== false) {
+                    document.getElementById('net-ip').innerText = data.ip;
+                    document.getElementById('net-country').innerText = `${data.country || 'N/A'} (${data.country_code || 'N/A'})`;
+                    document.getElementById('net-state').innerText = data.region || 'N/A';
                     document.getElementById('net-city').innerText = data.city || 'N/A';
-                    document.getElementById('net-postal').innerText = data.zip || 'N/A';
-                    document.getElementById('net-coords').innerText = `${data.lat}, ${data.lon}`;
-                    document.getElementById('net-isp').innerText = data.isp || data.org || 'N/A';
-                    document.getElementById('net-asn').innerText = data.as || 'N/A';
-                    
-                    document.getElementById('net-proxy').innerText = "Proxy/VPN: No";
-                    document.getElementById('net-hosting').innerText = "No ✅";
-                    document.getElementById('net-threat').innerText = "Low (Safe) ✅";
-                    document.getElementById('net-security-status').innerText = "Inbound: Safe | Outbound: Safe";
+                    document.getElementById('net-postal').innerText = data.postal || 'N/A';
+                    document.getElementById('net-coords').innerText = `${data.latitude}, ${data.longitude}`;
+                    document.getElementById('net-isp').innerText = data.connection?.isp || data.connection?.org || 'N/A';
+                    document.getElementById('net-asn').innerText = data.connection?.asn ? `AS${data.connection.asn}` : 'N/A';
+
+                    renderHostingFlag(typeof data.type === 'string' ? data.type.toLowerCase() === 'hosting' : null);
+                    renderSecurityStatus();
                 } else {
-                    throw new Error();
+                    throw new Error(data.message || 'lookup failed');
                 }
             } catch (e) {
-                document.getElementById('net-ip').innerText = 'Adblocker / Restricted';
+                document.getElementById('net-ip').innerText = 'Blocked / Unavailable';
                 document.getElementById('net-country').innerText = 'Unavailable';
                 document.getElementById('net-state').innerText = 'Unavailable';
                 document.getElementById('net-city').innerText = 'Unavailable';
+                document.getElementById('net-postal').innerText = 'Unavailable';
+                document.getElementById('net-coords').innerText = 'Unavailable';
                 document.getElementById('net-isp').innerText = 'Unavailable';
+                document.getElementById('net-asn').innerText = 'Unavailable';
+                renderHostingFlag(null);
+                renderSecurityStatus();
             }
+        }
+
+        function renderHostingFlag(isHosting) {
+            const el = document.getElementById('net-hosting');
+            if (isHosting === null) {
+                el.innerText = "Unknown (no signal)";
+            } else {
+                el.innerText = isHosting ? "Likely Yes ⚠️" : "Likely No ✅";
+            }
+        }
+
+        // Real check instead of a hardcoded "Inbound: Safe | Outbound: Safe" string —
+        // this actually reflects whether the page itself is being served over HTTPS.
+        function renderSecurityStatus() {
+            const el = document.getElementById('net-security-status');
+            const isSecure = window.location.protocol === 'https:' || window.location.hostname === 'localhost';
+            el.innerText = isSecure ? "Page served over HTTPS ✅" : "Page NOT encrypted ⚠️";
         }
     </script>
 </body>
